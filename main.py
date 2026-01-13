@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from meilisearch import Client
 import openai
@@ -8,6 +9,18 @@ import os
 # CONFIGURATION
 # ----------------------------
 app = FastAPI(title="Cayce Vault API")
+
+# CORS: Allow your Vercel frontend to talk to this backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://cayce-vault-frontend.vercel.app",
+        "http://localhost:3000"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Meilisearch setup
 MEILISEARCH_URL = os.getenv("MEILISEARCH_URL")
@@ -50,7 +63,6 @@ async def precision_search(request: SearchRequest):
             "limit": 10,
             "attributesToRetrieve": ["reading_id", "reading_text", "date", "category"]
         })
-        # Format results
         formatted = []
         for hit in results["hits"]:
             formatted.append(SearchResult(
@@ -67,7 +79,6 @@ async def precision_search(request: SearchRequest):
 @app.post("/search/insight", response_model=InsightResponse)
 async def insight_search(request: SearchRequest):
     try:
-        # Step 1: Semantic search in chunks
         index = meili.index(INSIGHT_INDEX)
         results = index.search(request.query, {
             "limit": 5,
@@ -75,7 +86,6 @@ async def insight_search(request: SearchRequest):
             "attributesToRetrieve": ["reading_id", "text"]
         })
         
-        # Step 2: Prepare context for LLM
         sources = []
         context = ""
         for hit in results["hits"]:
@@ -87,7 +97,6 @@ async def insight_search(request: SearchRequest):
         if not context.strip():
             return InsightResponse(answer="No relevant readings found.", sources=[])
 
-        # Step 3: Ask OpenAI
         prompt = (
             "You are Edgar Cayce's wisdom assistant. Based ONLY on the provided Cayce readings below, "
             "answer the user's question with compassion, clarity, and spiritual insight. "
