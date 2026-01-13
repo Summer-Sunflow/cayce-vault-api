@@ -31,7 +31,7 @@ meili = Client(MEILISEARCH_URL, MEILISEARCH_KEY)
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Index names
-PRECISION_INDEX = "cayce-vault"
+PRECISION_INDEX = "cayce_vault"
 INSIGHT_INDEX = "cayce_chunks"
 
 # ----------------------------
@@ -129,4 +129,5 @@ async def health_check():
         "meilisearch": bool(meili.health()),
         "openai": "configured" if os.getenv("OPENAI_API_KEY") else "missing"
     }
+
 
