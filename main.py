@@ -82,7 +82,7 @@ async def insight_search(request: SearchRequest):
         index = meili.index(INSIGHT_INDEX)
         results = index.search(request.query, {
             "limit": 5,
-            "hybrid": {"embedder": "openai_embedder"},
+            "hybrid": {"embedder": "OpenAi_Embedder"},
             "attributesToRetrieve": ["reading_id", "text"]
         })
         
@@ -129,6 +129,7 @@ async def health_check():
         "meilisearch": bool(meili.health()),
         "openai": "configured" if os.getenv("OPENAI_API_KEY") else "missing"
     }
+
 
 
 
