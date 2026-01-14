@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from meilisearch import Client
-import openai
+from openai import OpenAI
 import os
 
 # ----------------------------
@@ -27,10 +27,10 @@ MEILISEARCH_URL = os.getenv("MEILISEARCH_URL")
 MEILISEARCH_KEY = os.getenv("MEILISEARCH_MASTER_KEY")
 meili = Client(MEILISEARCH_URL, MEILISEARCH_KEY)
 
-# OpenAI setup
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# OpenAI setup (v1.x)
+# The OpenAI client will automatically read OPENAI_API_KEY from env
 
-# Index names
+# Index names — must match Meilisearch exactly
 PRECISION_INDEX = "cayce_vault"
 INSIGHT_INDEX = "cayce_chunks"
 
@@ -106,14 +106,16 @@ async def insight_search(request: SearchRequest):
             "Answer:"
         )
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4-turbo",
+        # OpenAI v1.x API
+        client = OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
             max_tokens=500,
             temperature=0.7
         )
 
-        answer = response.choices[0].message["content"].strip()
+        answer = response.choices[0].message.content.strip()
         return InsightResponse(answer=answer, sources=sources)
 
     except Exception as e:
@@ -129,8 +131,3 @@ async def health_check():
         "meilisearch": bool(meili.health()),
         "openai": "configured" if os.getenv("OPENAI_API_KEY") else "missing"
     }
-
-
-
-
-
