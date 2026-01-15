@@ -40,10 +40,7 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     id: str
     reading_id: str
-    excerpt: str = ""
-    full_reading: str = ""
-    background: str = ""
-    reports: str = ""
+    text: str
     date: str = ""
     category: str = ""
 
@@ -61,24 +58,14 @@ async def precision_search(request: SearchRequest):
         index = meili.index(PRECISION_INDEX)
         results = index.search(request.query, {
             "limit": 10,
-            "attributesToRetrieve": [
-                "reading_id",
-                "reading_text",
-                "background_text",
-                "report_text",
-                "date",
-                "category"
-            ]
+            "attributesToRetrieve": ["reading_id", "reading_text", "date", "category"]
         })
         formatted = []
         for hit in results["hits"]:
             formatted.append(SearchResult(
                 id=hit.get("id", hit.get("reading_id", "")),
                 reading_id=hit.get("reading_id", ""),
-                excerpt=hit.get("reading_text", ""),
-                full_reading=hit.get("reading_text", ""),  # same as excerpt for now
-                background=hit.get("background_text", ""),
-                reports=hit.get("report_text", ""),
+                text=hit.get("reading_text", ""),
                 date=hit.get("date", ""),
                 category=hit.get("category", "")
             ))
@@ -147,7 +134,7 @@ async def insight_search(request: SearchRequest):
 
         answer = response.choices[0].message.content.strip()
 
-     # ✅ REQUIRED DISCLAIMERS (per ECF) — with spacing and visual separation
+        # ✅ REQUIRED DISCLAIMERS (per ECF) — with spacing and visual separation
         disclaimer = (
             "\n\n\n"  # Three line breaks for generous spacing
             "<small>"
