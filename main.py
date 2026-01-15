@@ -14,7 +14,7 @@ app = FastAPI(title="Cayce Vault API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://cayce-vault-frontend.vercel.app",
+        "https://cayce-vault-frontend.vercel.app",  # ← fixed: no extra spaces
         "http://localhost:3000"
     ],
     allow_credentials=True,
@@ -77,7 +77,6 @@ async def precision_search(request: SearchRequest):
 @app.post("/search/insight", response_model=InsightResponse)
 async def insight_search(request: SearchRequest):
     try:
-        # Validate env vars at runtime
         if not os.getenv("OPENAI_API_KEY"):
             raise HTTPException(status_code=500, detail="Missing OPENAI_API_KEY in environment")
         if not os.getenv("MEILISEARCH_MASTER_KEY"):
@@ -102,34 +101,49 @@ async def insight_search(request: SearchRequest):
         if not context.strip():
             return InsightResponse(answer="No relevant readings found for this query.", sources=[])
 
+        # ✅ FULLY COMPLIANT PROMPT — aligned with ECF guidelines
         prompt = (
-            "You are a compassionate spiritual guide channeling Edgar Cayce’s wisdom. "
-            "Based SOLELY on the Cayce readings provided below, offer a thoughtful, "
-            "nurturing, and deeply insightful response to the user’s question.\n\n"
+            "You are an AI research assistant exploring Edgar Cayce’s archival readings (held by the Edgar Cayce Foundation). "
+            "Based SOLELY on the provided readings below, offer a clear, respectful, and insightful synthesis that honors the spiritual depth of the material.\n\n"
             
             "Guidelines:\n"
-            "- Begin with a gentle acknowledgment of the seeker’s intent\n"
-            "- Weave together key themes from multiple readings (cite as [294-12])\n"
-            "- Include practical suggestions or meditative practices when relevant\n"
-            "- Close with an uplifting, soul-centered reflection\n"
+            "- Maintain a tone of reverence and encouragement toward the wisdom in the readings\n"
+            "- Do NOT address the user personally (avoid 'you', 'we', 'beloved', 'Seeker', etc.)\n"
+            "- Do NOT combine health recommendations unless they appear together in a single reading\n"
+            "- Do NOT claim Cayce 'favored,' 'often said,' or 'loved to point out' — only report what is present\n"
+            "- If a concept appears in multiple retrieved readings, you may note it as 'frequent,' 'recurring,' or 'referenced across many readings' — but only cite the specific reading IDs that were provided\n"
+            "- When describing content, use direct quotes when possible, or closely paraphrase using the reading’s own terminology — do not substitute modern interpretations (e.g., say 'reflect on impressions' not 'journal')\n"
+            "- Do NOT invent prayers, rituals, or practices not explicitly in the source\n"
+            "- Cite reading numbers like [294-12]\n"
             "- Write in warm, flowing prose (not bullet points)\n"
-            "- Be thorough — aim for a meaningful paragraph or two\n\n"
+            "- Close with one open-ended, research-oriented question that naturally follows from the themes (e.g., 'How might the concept of... be explored further in the readings?')\n\n"
             
             f"Relevant Cayce Readings:\n{context}\n"
             f"User Question: \"{request.query}\"\n\n"
-            "Your Response:"
+            "Response:"
         )
 
         client = OpenAI()
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=1400,
-            temperature=0.75
+            max_tokens=1200,
+            temperature=0.65
         )
 
         answer = response.choices[0].message.content.strip()
-        return InsightResponse(answer=answer, sources=sources)
+
+        # ✅ REQUIRED DISCLAIMERS (per ECF)
+        disclaimer = (
+            "\n\n---\n"
+            "© Edgar Cayce Foundation. All readings are copyrighted and used for research purposes only.\n"
+            "Health-related information reflects historical practices and may be outdated or unsafe without medical supervision. "
+            "Consult a licensed physician before applying any health advice. This tool does not replace professional mental health or medical care.\n"
+            "Responses are AI-generated and may not accurately reflect the original source material or the views of the Edgar Cayce organizations."
+        )
+
+        full_answer = answer + disclaimer
+        return InsightResponse(answer=full_answer, sources=sources)
 
     except Exception as e:
         print(f"Insight error: {str(e)}")
