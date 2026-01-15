@@ -134,13 +134,16 @@ async def insight_search(request: SearchRequest):
 
         answer = response.choices[0].message.content.strip()
 
-        # ✅ REQUIRED DISCLAIMERS (per ECF)
+     # ✅ REQUIRED DISCLAIMERS (per ECF) — with spacing and visual separation
         disclaimer = (
-            "\n\n---\n"
-            "© Edgar Cayce Foundation. All readings are copyrighted and used for research purposes only.\n"
+            "\n\n\n"  # Three line breaks for generous spacing
+            "<small>"
+            "---\n"
+            "© Edgar Cayce Foundation. All Readings are copyrighted and used for research purposes only.\n"
             "Health-related information reflects historical practices and may be outdated or unsafe without medical supervision. "
             "Consult a licensed physician before applying any health advice. This tool does not replace professional mental health or medical care.\n"
             "Responses are AI-generated and may not accurately reflect the original source material or the views of the Edgar Cayce organizations."
+            "</small>"
         )
 
         full_answer = answer + disclaimer
@@ -161,4 +164,5 @@ async def health_check():
         "meilisearch": bool(meili.health()),
         "openai": "configured" if openai_configured else "missing"
     }
+
 
