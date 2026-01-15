@@ -14,7 +14,7 @@ app = FastAPI(title="Cayce Vault API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://cayce-vault-frontend.vercel.app",  # ← fixed: no extra spaces
+        "https://cayce-vault-frontend.vercel.app",  # ← FIXED: no extra spaces
         "http://localhost:3000"
     ],
     allow_credentials=True,
@@ -40,7 +40,10 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     id: str
     reading_id: str
-    text: str
+    excerpt: str = ""
+    full_reading: str = ""
+    background: str = ""
+    reports: str = ""
     date: str = ""
     category: str = ""
 
@@ -58,14 +61,24 @@ async def precision_search(request: SearchRequest):
         index = meili.index(PRECISION_INDEX)
         results = index.search(request.query, {
             "limit": 10,
-            "attributesToRetrieve": ["reading_id", "reading_text", "date", "category"]
+            "attributesToRetrieve": [
+                "reading_id",
+                "reading_text",
+                "background_text",
+                "report_text",
+                "date",
+                "category"
+            ]
         })
         formatted = []
         for hit in results["hits"]:
             formatted.append(SearchResult(
                 id=hit.get("id", hit.get("reading_id", "")),
                 reading_id=hit.get("reading_id", ""),
-                text=hit.get("reading_text", ""),
+                excerpt=hit.get("reading_text", ""),
+                full_reading=hit.get("reading_text", ""),  # same as excerpt for now
+                background=hit.get("background_text", ""),
+                reports=hit.get("report_text", ""),
                 date=hit.get("date", ""),
                 category=hit.get("category", "")
             ))
@@ -99,25 +112,25 @@ async def insight_search(request: SearchRequest):
                 context += f"[{rid}] {text}\n\n"
         
         if not context.strip():
-            return InsightResponse(answer="No relevant readings found for this query.", sources=[])
+            return InsightResponse(answer="No relevant Readings found for this query.", sources=[])
 
         # ✅ FULLY COMPLIANT PROMPT — aligned with ECF guidelines
         prompt = (
-            "You are an AI research assistant exploring Edgar Cayce’s archival readings (held by the Edgar Cayce Foundation). "
-            "Based SOLELY on the provided readings below, offer a clear, respectful, and insightful synthesis that honors the spiritual depth of the material.\n\n"
+            "You are an AI research assistant exploring Edgar Cayce’s archival Readings (held by the Edgar Cayce Foundation). "
+            "Based SOLELY on the provided Readings below, offer a clear, respectful, and insightful synthesis that honors the spiritual depth of the material.\n\n"
             
             "Guidelines:\n"
             "- Always capitalize 'Reading' and 'Readings' when referring to Edgar Cayce's channeled material\n"
-            "- Maintain a tone of deep respect toward the wisdom in the readings\n"
+            "- Maintain a tone of deep respect toward the wisdom in the Readings\n"
             "- Do NOT address the user personally (avoid 'you', 'we', 'beloved', 'Seeker', etc.)\n"
-            "- Do NOT combine health recommendations unless they appear together in a single reading\n"
+            "- Do NOT combine health recommendations unless they appear together in a single Reading\n"
             "- Do NOT claim Cayce 'favored,' 'often said,' or 'loved to point out' — only report what is present\n"
-            "- If a concept appears in multiple retrieved readings, you may note it as 'frequent,' 'recurring,' or 'referenced across many readings' — but only cite the specific reading IDs that were provided\n"
-            "- When describing content, use direct quotes when possible, or closely paraphrase using the reading’s own terminology — do not substitute modern interpretations (e.g., say 'reflect on impressions' not 'journal')\n"
+            "- If a concept appears in multiple retrieved Readings, you may note it as 'frequent,' 'recurring,' or 'referenced across many Readings' — but only cite the specific Reading IDs that were provided\n"
+            "- When describing content, use direct quotes when possible, or closely paraphrase using the Reading’s own terminology — do not substitute modern interpretations (e.g., say 'reflect on impressions' not 'journal')\n"
             "- Do NOT invent prayers, rituals, or practices not explicitly in the source\n"
-            "- Cite reading numbers like [294-12]\n"
+            "- Cite Reading numbers like [294-12]\n"
             "- Write in warm, flowing prose (not bullet points)\n"
-            "- Close with one open-ended, research-oriented question that naturally follows from the themes (e.g., 'How might the concept of... be explored further in the readings?')\n\n"
+            "- Close with one open-ended, research-oriented question that naturally follows from the themes (e.g., 'How might the concept of... be explored further in the Readings?')\n\n"
             
             f"Relevant Cayce Readings:\n{context}\n"
             f"User Question: \"{request.query}\"\n\n"
@@ -164,5 +177,3 @@ async def health_check():
         "meilisearch": bool(meili.health()),
         "openai": "configured" if openai_configured else "missing"
     }
-
-
