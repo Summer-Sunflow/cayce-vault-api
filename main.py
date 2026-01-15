@@ -107,7 +107,8 @@ async def insight_search(request: SearchRequest):
             "Based SOLELY on the provided readings below, offer a clear, respectful, and insightful synthesis that honors the spiritual depth of the material.\n\n"
             
             "Guidelines:\n"
-            "- Maintain a tone of reverence and encouragement toward the wisdom in the readings\n"
+            "- Always capitalize 'Reading' and 'Readings' when referring to Edgar Cayce's channeled material\n"
+            "- Maintain a tone of deep respect toward the wisdom in the readings\n"
             "- Do NOT address the user personally (avoid 'you', 'we', 'beloved', 'Seeker', etc.)\n"
             "- Do NOT combine health recommendations unless they appear together in a single reading\n"
             "- Do NOT claim Cayce 'favored,' 'often said,' or 'loved to point out' — only report what is present\n"
@@ -160,3 +161,4 @@ async def health_check():
         "meilisearch": bool(meili.health()),
         "openai": "configured" if openai_configured else "missing"
     }
+
